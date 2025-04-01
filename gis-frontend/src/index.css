@@ -17,3 +17,46 @@ html, body {
   height: 100%;
   touch-action: none;
 }
+
+
+.custom-marker .marker-container {
+  background: white;
+  border: 2px solid #b30000;
+  border-radius: 12px;
+  padding: 6px 10px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: transform 0.3s;
+}
+
+.custom-marker .marker-icon {
+  width: 24px;
+  height: 28px;
+}
+
+.custom-marker .marker-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: #006400;
+}
+
+.custom-marker:hover .marker-container {
+  transform: scale(1.1);
+}
+
+
+/* Make the entire info window grey */
+.gm-style-iw {
+  background-color: #b9b9b9 !important; /* Light grey */
+
+  padding: 10px !important;
+
+}
+
+/* Remove default white background */
+.gm-style > div > div > div > div {
+  background: transparent !important;
+}

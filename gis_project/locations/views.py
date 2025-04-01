@@ -12,7 +12,7 @@ import re
 @api_view(['GET', 'POST'])
 def locations(request):
     if request.method == 'GET':
-        locations = Location.objects.all()
+        locations = Location.objects.all().order_by('-latitude')
         serializer = LocationSerializer(locations, many=True)
         return Response(serializer.data)
 
@@ -22,6 +22,7 @@ def locations(request):
             serializer.save()
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
+
 
 @api_view(['GET'])
 def get_location_by_id(request, id):
@@ -79,6 +80,7 @@ def apply_colored_text(text):
 
     pattern = re.compile(r"/(r|o|y|g|b|p|lr|lo|ly|lg|lb|lp)(.*?)/\1", re.DOTALL)
     
+    # Preserve newlines
     colored_text = re.sub(pattern, replacer, text)
     
     return colored_text.replace("\n", "<br>")

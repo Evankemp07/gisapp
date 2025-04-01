@@ -24,7 +24,10 @@ const COLOR_MAP = {
   "/lp": "#ff99ff",
 };
 
-
+const extractPinColor = (title) => {
+  const match = title.match(/\/(r|o|y|g|b|p|lr|lo|ly|lg|lb|lp)/);
+  return match ? COLOR_MAP[`/${match[1]}`] || null : null;
+};
 
 const cleanTitle = (title) => title.replace(/\/(r|o|y|g|b|p|lr|lo|ly|lg|lb|lp)/g, "").trim();
 
@@ -54,34 +57,9 @@ const App = () => {
     address: "",
     description: "",
   });
-  const [isBannerHidden, setIsBannerHidden] = useState(false);
-
 
   const mapRef = useRef(null);
   const infoWindowRef = useRef(null);
-
-  const darkenColor = (color, percent = 20) => {
-    const temp = document.createElement("div");
-    temp.style.color = color;
-    document.body.appendChild(temp);
-  
-    const computed = window.getComputedStyle(temp).color;
-    document.body.removeChild(temp);
-  
-    const match = computed.match(/^rgb\s*\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)$/);
-    if (!match) return color;
-  
-    const [_, r, g, b] = match.map(Number);
-    const factor = 1 - percent / 100;
-  
-    return `rgb(${Math.floor(r * factor)}, ${Math.floor(g * factor)}, ${Math.floor(b * factor)})`;
-  };
-  
-
-  const extractPinColor = (title) => {
-    const match = title.match(/\/(r|o|y|g|b|p|lr|lo|ly|lg|lb|lp)/);
-    return match ? COLOR_MAP[`/${match[1]}`] || null : null;
-  };
 
   const handleSubmit = () => {
     const mailtoLink = `mailto:addtomap@lightsmusicaction.com?subject=New%20Light%20Show%20Submission&body=
@@ -141,25 +119,9 @@ const App = () => {
 
   const initMap = useCallback(async () => {
     if (!window.google || locations.length === 0) return;
-    const haloStyleId = "red-green-halo-style";
-    if (!document.getElementById(haloStyleId)) {
-      const style = document.createElement("style");
-      style.id = haloStyleId;
-      style.innerHTML = `
-        @keyframes rotate-halo {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-    
-    
-    
-
     const { ColorScheme } = await window.google.maps.importLibrary("core");
     const { Map, InfoWindow } = window.google.maps;
-    const { AdvancedMarkerElement} = window.google.maps.marker;
+    const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
   
     const centerPoint = getGeographicCenter(locations);
     const closestToCenter = getClosestLocationToCenter(locations, centerPoint);
@@ -179,77 +141,28 @@ const App = () => {
       const isAnimated = location.is_animated;
       const extractedColor = extractPinColor(location.name);
 
-      const pinColor = extractedColor || (" #D3D3D3");
-      const borderColor = darkenColor(pinColor, 20);
+      const pinColor = extractedColor || (isAnimated ? "#228B22" : "#D3D3D3");
+      const borderColor = extractedColor || (isAnimated ? "#006400" : "#A9A9A9");
       const cleanedTitle = cleanTitle(location.name);
 
       const glyphImg = document.createElement("img");
       glyphImg.src = SVG_ICON_URL;
-      glyphImg.style.width = "25px";
+      glyphImg.style.width = "20px";
       glyphImg.style.height = "25px";
 
-      const customMarker = document.createElement("div");
-      customMarker.className = "custom-marker";
-      customMarker.style.display = "flex";
-      customMarker.style.alignItems = "center";
-      customMarker.style.justifyContent = "center";
-      customMarker.style.width = "25px";
-      customMarker.style.height = "25px";
-      customMarker.style.borderRadius = "50%";
-      customMarker.style.backgroundColor = pinColor;
-      customMarker.style.border = `2px solid ${borderColor}`;
-      customMarker.style.boxShadow = isAnimated
-
-      if (isAnimated) {
-        customMarker.style.position = "relative";
-      
-        const halo = document.createElement("div");
-        halo.style.position = "absolute";
-
-
-
-        halo.style.width = "33px";
-        halo.style.height = "33px";
-        halo.style.borderRadius = "50%";
-        halo.style.zIndex = "-1";
-        halo.style.background = `
-          repeating-conic-gradient(
-            red 0deg 20deg,
-            green 30deg 50deg
-          )
-        `;
-
-        halo.style.animation = "rotate-halo 15s linear infinite";
-        halo.style.pointerEvents = "none";
-      
-        customMarker.appendChild(halo);
-      }
-      
-      
-      
-      
-      
-  
-
-
-
-      const hatImg = document.createElement("img");
-      hatImg.src = SVG_ICON_URL;
-      hatImg.style.width = "22px";
-      hatImg.style.height = "28px";
-
-      customMarker.appendChild(hatImg);
+      const pinElement = new PinElement({
+        glyph: glyphImg,
+        background: pinColor,
+        borderColor: borderColor,
+      });
 
       const marker = new AdvancedMarkerElement({
-        map: mapInstance,
         position: { lat: location.latitude, lng: location.longitude },
+        map: mapInstance,
         title: cleanedTitle,
-        content: customMarker,
+        content: pinElement.element,
         gmpClickable: true,
-        zIndex: Math.round(location.latitude * -100000),
       });
-      
-      
 
       marker.addEventListener("gmp-click", () => {
         const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`;
@@ -257,29 +170,39 @@ const App = () => {
         const formattedDescription = location.description
           ? parseColoredText(marked.parse(location.description.replace(/\n/g, "  \n")))
           : "";
-        const nonAnimatedMessage = isAnimated
+        const nonAnimatedMessage = !isAnimated
           ? `<p style="
-              color: green; 
+              color: red; 
               font-weight: bold;
               border-radius: 12px;
               border: 2px solid #006400;
               padding: 10px 12px;
-              text-align: center;
-              max-width: 240px;
               ">
-              This Light Show Dances to Music!</p>`
+              This light display does not dance to music</p>`
           : "";
-          const imageHtml = location.image
-          ? `<div style="text-align: center; margin-top: 12px;">
-               <img src="${location.image}" alt="Light Show Image" style="
-                 max-width: 240px;
-                 border-radius: 12px;
-                 border: 2px solid #b30000;
-               " />
-             </div>`
+        const imageHtml = location.image
+          ? `<img src="${location.image}" alt="Light Show Image" style="
+              max-width: 240px;
+              object-fit: cover;
+              border-radius: 12px;
+              border: 2px solid #b30000;
+            " />`
           : '';
-        
       
+          const formattedAddressHtml = `
+            <div style="
+              font-size: 14px;
+              background: rgb(255, 255, 255);
+              border: 2px solid #006400;
+              border-radius: 12px;
+              padding: 10px 12px;
+              font-weight: bold;
+              margin-bottom: 12px;
+              color: #b30000;
+            ">
+              ${formattedAddress}
+            </div>
+          `;
 
           const buttonRowHtml = `
             <div style="
@@ -330,76 +253,50 @@ const App = () => {
             </div>
           `;
 
-          const voteBadge = location.is_contestant
-              ? `<div style="text-align: center; margin-top: 12px;">
-                  <a href="https://business.cvballiance.org/events/details/deck-the-town-holiday-light-contest-voting-40538" target="_blank" rel="noopener noreferrer">
-                    <img src="https://hideously-pleased-puma.ngrok-free.app/lightshow/vote.png" 
-                        alt="Vote" 
-                        style="max-width: 240px; border-radius: 12px;
-              border: 2px solid #b30000; cursor: pointer;" />
-                  </a>
-                </div>`
-              : "";
-
-
           const infoContent = `
-          <div style="
-            font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
-            padding: 16px;
-            max-width: 320px;
-            font-weight: bold;
-            background: #f0f0f0;
-            border-radius: 12px;
-            color: #333;
-          ">
-            <h2 style="
-              margin-top: 0;
-              font-size: 20px;
-              color: #b30000;
-              text-align: center;
-              border-bottom: 2px dashed #b30000;
-              padding-bottom: 8px;
-            ">
-              ${cleanedTitle}
-            </h2>
-        
             <div style="
-              font-size: 14px;
-              background: #f0f0f0;
-              border: 2px solid #006400;
-              border-radius: 12px;
-              padding: 10px 12px;
+              font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
+              padding: 16px;
+              max-width: 320px;
               font-weight: bold;
-              margin-bottom: 12px;
-              color: #b30000;
+              background: rgb(255, 255, 255);
+              border: 2px solid #b30000;
+              border-radius: 12px;
+              color: #333;
             ">
-              ${formattedAddress}
-            </div>
-        
-            ${formattedDescription ? `
-              <div style="
-                font-size: 13px;
-                line-height: 1;
-                color: #006400;
-                background: #f0f0f0;
-                border: 2px solid #b30000;
-                border-radius: 12px;
-                padding: 10px 12px;
-                margin-bottom: 12px;
+              <h2 style="
+                margin-top: 0;
+                font-size: 20px;
+                color: #b30000;
+                text-align: center;
+                border-bottom: 2px dashed #b30000;
+                padding-bottom: 8px;
               ">
-                ${formattedDescription}
-              </div>
-            ` : ""}
-            ${imageHtml}
-            ${voteBadge}
-            ${nonAnimatedMessage}
-            ${buttonRowHtml}
-</div>
+                ${cleanedTitle}
+              </h2>
 
-        `;
-        
-        
-        
+              ${formattedAddressHtml}
+
+              ${formattedDescription ? `
+                <div style="
+                  font-size: 13px;
+                  line-height: 1;
+                  color:  #006400
+                  background: rgb(255, 255, 255);
+                  border: 2px solid #b30000;
+                  border-radius: 12px;
+                  padding: 10px 12px;
+                  margin-bottom: 12px;
+                ">
+                  ${formattedDescription}
+                </div>
+              ` : ""}
+
+              ${nonAnimatedMessage}
+              ${imageHtml}
+              ${buttonRowHtml}
+            </div>
+          `;
 
       
         infoWindowInstance.close();
@@ -431,95 +328,87 @@ const App = () => {
     });
 
     setTimeout(() => window.dispatchEvent(new Event("resize")), 500);
-
-    
   }, [locations]);
 
   useEffect(() => {
-    if (!isLoaded || locations.length === 0) return;
+    if (isLoaded && locations.length > 0) {
+      initMap();
   
-    initMap().then(() => {
       const params = new URLSearchParams(window.location.search);
       const sharedLocationId = params.get("locationId");
   
-      if (!sharedLocationId) return;
+      if (sharedLocationId) {
+        const sharedLocation = locations.find((loc) => loc.id === parseInt(sharedLocationId));
+        if (sharedLocation && window.google) {
+          const mapInstance = mapRef.current;
+          const infoWindow = infoWindowRef.current;
   
-      const sharedLocation = locations.find(
-        (loc) => loc.id === parseInt(sharedLocationId)
-      );
+          mapInstance.setCenter({ lat: sharedLocation.latitude, lng: sharedLocation.longitude });
+          mapInstance.setZoom(14);
   
-      if (!sharedLocation || !window.google) return;
+          const cleanedTitle = cleanTitle(sharedLocation.name);
+          const formattedAddress = sharedLocation.address
+            ? sharedLocation.address.replace(/\r\n/g, ", ")
+            : "No address provided";
+          const formattedDescription = sharedLocation.description
+            ? parseColoredText(marked.parse(sharedLocation.description.replace(/\n/g, "  \n")))
+            : "";
+          const isAnimated = sharedLocation.is_animated;
+          const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${sharedLocation.latitude},${sharedLocation.longitude}`;
+          const nonAnimatedMessage = !isAnimated
+            ? `<div style="
+                background: rgb(255, 255, 255);
+                border: 2px solid #006400;
+                border-radius: 12px;
+                padding: 10px 12px;
+                color: #b30000;
+                font-weight: bold;
+                text-align: center;
+                margin-bottom: 12px;
+              ">
+                This light display does <u>not</u> dance to music
+              </div>`
+            : "";
+          const imageHtml = sharedLocation.image
+            ? `<img src="${sharedLocation.image}" alt="Light Show Image" style="
+                max-width: 240px;
+                object-fit: cover;
+                border-radius: 12px;
+                border: 2px solid #b30000;
+                margin-top: 10px;
+              " />`
+            : '';
   
-      const mapInstance = mapRef.current;
-      const infoWindow = infoWindowRef.current;
+          const infoContent = `
+            <div style="
+              font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
+              padding: 16px;
+              max-width: 320px;
+              background: rgb(255, 255, 255);
+              border: 2px solid #b30000;
+              border-radius: 12px;
+              color: #333;
+            ">
   
-      if (!mapInstance || !infoWindow) return;
-  
-      const cleanedTitle = cleanTitle(sharedLocation.name);
-      const formattedAddress = sharedLocation.address
-        ? sharedLocation.address.replace(/\r\n/g, ", ")
-        : "No address provided";
-      const formattedDescription = sharedLocation.description
-        ? parseColoredText(marked.parse(sharedLocation.description.replace(/\n/g, "  \n")))
-        : "";
-      const isAnimated = sharedLocation.is_animated;
-      const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${sharedLocation.latitude},${sharedLocation.longitude}`;
-      const nonAnimatedMessage = !isAnimated
-        ? `<div style="
-            background: #f0f0f0;
-            border: 2px solid #006400;
-            border-radius: 12px;
-            padding: 10px 12px;
-            color: #b30000;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 12px;">
-            This light display does <u>not</u> dance to music
-          </div>`
-        : "";
-      const imageHtml = sharedLocation.image
-        ? `<img src="${sharedLocation.image}" alt="Light Show Image" style="
-            max-width: 240px;
-            object-fit: cover;
-            border-radius: 12px;
-            border: 2px solid #b30000;
-            margin-top: 10px;
-          " />`
-        : "";
-        const infoContent = `
-        <div style="
-          font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
-          padding: 16px;
-          max-width: 320px;
-          font-weight: bold;
-          background: #f0f0f0;
-          border-radius: 12px;
-
-          color: #333;
-        ">
-          <h2 style="
-            margin-top: 0;
-            font-size: 20px;
-            color: #b30000;
-            text-align: center;
-            border-bottom: 2px dashed #b30000;
-            padding-bottom: 8px;
-          ">
-            ${cleanedTitle}
-          </h2>
-      
-          <div style="
-            font-size: 14px;
-            
-            border: 2px solid #006400;
-            border-radius: 12px;
-            padding: 10px 12px;
-            font-weight: bold;
-            margin-bottom: 12px;
-            color: #b30000;
-          ">
-            ${formattedAddress}
-                  <a href="${directionsUrl}" target="_blank"
+              <h2 style="
+                margin-top: 0;
+                font-size: 20px;
+                color: #b30000;
+                text-align: center;
+                border-bottom: 2px dashed #b30000;
+                padding-bottom: 8px;
+              ">
+                ${cleanedTitle}
+              </h2>
+          
+              <p style="font-size: 14px;               
+                background: rgb(255, 255, 255);
+                border: 2px solid #006400;
+                border-radius: 12px;
+                padding: 10px 12px;
+                margin-bottom: 12px;">
+                <span style="color: #444;">${formattedAddress}</span>
+                <a href="${directionsUrl}" target="_blank"
                   style="
                     display: block;
                     text-align: center;
@@ -539,188 +428,58 @@ const App = () => {
                 >
                   Get Directions
                 </a>
-          </div>
-      
-          ${formattedDescription ? `
-            <div style="
-              font-size: 13px;
-              line-height: 1;
-              color: #006400;
-              
-              border: 2px solid #b30000;
-              border-radius: 12px;
-              padding: 10px 12px;
-              margin-bottom: 12px;
-            ">
-              ${formattedDescription}
+              </p>
+          
+              ${formattedDescription ? `
+              <div style="
+                font-size: 13px;
+                color:rgb(0, 0, 0);
+                line-height: 1;
+                background: rgb(255, 255, 255);
+                border: 2px solid #b30000;
+                border-radius: 12px;
+                padding: 10px 12px;
+                margin-bottom: 12px;
+              ">
+                ${formattedDescription}
+              </div>
+              ` : ""}
+          
+              ${nonAnimatedMessage}
+              ${imageHtml}
             </div>
-          ` : ""}
-      
-          ${nonAnimatedMessage}
-          ${imageHtml}
-        </div>
-      `;
+          `;
   
-      const invisibleMarker = new window.google.maps.Marker({
-        position: {
-          lat: sharedLocation.latitude,
-          lng: sharedLocation.longitude,
-        },
-        map: mapInstance,
-        opacity: 0,
-        clickable: false,
-        zIndex: -9999,
-      });
+          const invisibleMarker = new window.google.maps.Marker({
+            position: { lat: sharedLocation.latitude, lng: sharedLocation.longitude },
+            map: mapInstance,
+            opacity: 0,
+            clickable: false,
+            zIndex: -9999,
+          });
   
-      mapInstance.setCenter({
-        lat: sharedLocation.latitude,
-        lng: sharedLocation.longitude,
-      });
-      mapInstance.setZoom(14);
-  
-      infoWindow.setContent(infoContent);
-      infoWindow.open(mapInstance, invisibleMarker);
-    });
+          infoWindow.setContent(infoContent);
+          infoWindow.open(mapInstance, invisibleMarker);
+        }
+      }
+    }
   }, [isLoaded, locations, initMap]);
-  
   
   
   
 
   return (
     <div style={{ width: "100vw", height: mapHeight, position: "relative" }}>
-
-<div
-  style={{
-    position: "fixed",
-    bottom: isBannerHidden ? "-55px" : "10px",
-    left: "10px",
-    transition: "bottom 0.3s ease-in-out",
-    zIndex: 1000,
-  }}
->
-<div
-  onClick={() => setIsBannerHidden(!isBannerHidden)}
-  style={{
-    position: "fixed",
-    bottom: "10px",
-    left: "10px",
-    backgroundColor: "rgb(129, 131, 129)",
-    color: "white",
-    borderRadius: "16px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    fontSize: "14px",
-    zIndex: 1001,
-    padding: "4px 10px",
-    gap: "6px",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-    transition: "transform 0.3s ease",
-  }}
-  title={isBannerHidden ? "Show" : "Hide"}
->
-  <span
-    style={{
-      display: "inline-block",
-      transform: isBannerHidden ? "rotate(0deg)" : "rotate(180deg)",
-      transition: "transform 0.3s ease",
-      fontSize: "16px",
-    }}
-  >
-    ▲
-  </span>
-  <span style={{ fontWeight: "bold" }}>
-    {isBannerHidden ? "Show Lengend" : "Hide Legend"}
-  </span>
-</div>
-
-
-
-<div
-  style={{
-    position: "fixed",
-    bottom: isBannerHidden ? "-150px" : "45px",
-    left: "10px",
-    backgroundColor: "rgba(129, 131, 129, 0.81)",
-    padding: "8px 12px",
-    borderRadius: "8px",
-    fontSize: "12px",
-    fontWeight: "normal",
-    color: "rgb(110, 110, 110)",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: "10px",
-    transition: "bottom 0.3s ease-in-out",
-    zIndex: 1000,
-  }}
->
-  {/* Legend Items */}
-  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-      <img
-        src="https://hideously-pleased-puma.ngrok-free.app/lightshow/animated.png"
-        alt="Animated"
-        style={{ height: "20px" }}
-      />
-      <span style={{ fontSize: "12px", color: "#000" }}><strong>= Animated</strong></span>
-    </div>
-    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-      <img
-        src="https://hideously-pleased-puma.ngrok-free.app/lightshow/noncontestant.png"
-        alt="Non-Contestant"
-        style={{ height: "20px" }}
-      />
-      <span style={{ fontSize: "12px", color: "#000" }}><strong>= Non-Contestant</strong></span>
-    </div>
-    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-      <img
-        src="https://hideously-pleased-puma.ngrok-free.app/lightshow/contestant.png"
-        alt="Contestant"
-        style={{ height: "20px" }}
-      />
-      <span style={{ fontSize: "12px", color: "#000" }}><strong>= Contestant</strong></span>
-    </div>
-  </div>
-
-  {/* Logo and Copyright */}
-  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-    <img
-      src="https://hideously-pleased-puma.ngrok-free.app/lightshow/LMA%20logo%202025.png"
-      alt="Lights Music Action Logo"
-      style={{ height: "20px", width: "auto", borderRadius: "3px" }}
-    />
-    <div style={{ lineHeight: 1.2 }}>
-      <a
-        href="https://www.lightsmusicaction.com/"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ color: "rgb(0, 0, 0)", textDecoration: "none" }}
-      >
-        <div><strong>Lights Music Action</strong></div>
-        <div>©2025 Evan Kemp</div>
-      </a>
-    </div>
-  </div>
-</div>
-</div>
-
-
-
-
       <div style={{ position: "absolute", top: 10, right: 10, zIndex: 10 }}>
         <button 
           onClick={() => setMenuOpen(!menuOpen)}
           style={{
-            background: "#b30000",
+            background: "#007bff",
             color: "white",
             padding: "10px 15px",
             border: "none",
             borderRadius: "5px",
-            fontSize: "25px",
+            fontSize: "16px",
             cursor: "pointer",
           }}
         >
