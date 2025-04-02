@@ -60,3 +60,56 @@ html, body {
 .gm-style > div > div > div > div {
   background: transparent !important;
 }
+
+
+.gm-style-iw {
+  padding: 0 !important;
+}
+
+.gm-style .gm-style-iw-c {
+  padding: 0 !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.gm-style .gm-style-iw-chr {
+  padding: 0 !important;
+}
+
+.iw-container {
+  width: 100%;
+}
+
+.iw-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #b30000;
+  color: white;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-weight: bold;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.iw-body {
+  padding: 16px;
+  background-color: #f0f0f0;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+
+@font-face {
+  font-family: 'FrostyFizz';
+  src: url('/home/evan/Desktop/gisapp/gis-frontend/public/fonts/FROSTYFIZZ.ttf') format('truetype');
+  font-display: swap;
+}
+
+.iw-container {
+  font-family: 'FrostyFizz', sans-serif !important;
+  font-size: 1.1rem !important;
+  letter-spacing: 0.03em !important;
+  line-height: 1.4 !important;
+}

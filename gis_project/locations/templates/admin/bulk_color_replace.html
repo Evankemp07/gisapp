@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+  <h1>{{ title }}</h1>
+  <form method="post">{% csrf_token %}
+    <p>
+      <strong>Note:</strong>
+      <ul>
+        <li>Replace: replaces <code>old_color</code> with <code>new_color</code>.</li>
+        <li>Remove: removes <code>old_color</code> from names.</li>
+        <li>Add: prepends <code>new_color</code> if it's not already in the name.</li>
+      </ul>
+    </p>
+    {{ form.as_p }}
+    <input type="submit" value="Apply" class="default">
+    <a href="..">Cancel</a>
+  </form>
+{% endblock %}

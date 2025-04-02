@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-e3fr6)r_x@+l2&qf1+&x2y@xftgfuc-1#*hl0h+uf(y280c$z4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["10.0.0.155", "localhost", "10.0.0.37", "hideously-pleased-puma.ngrok-free.app"]
+ALLOWED_HOSTS = ["10.0.0.155", "localhost", "10.0.0.37", "hideously-pleased-puma.ngrok-free.app", "lightshowlocator.web.app"]
 
 
 

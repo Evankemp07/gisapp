@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "lightshowlocator"
+  },
+  "targets": {
+    "lightshowlocator": {
+      "hosting": {
+        "target-site-alias": [
+          "lightshowlocator"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
