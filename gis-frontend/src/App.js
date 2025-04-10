@@ -1268,19 +1268,6 @@ const [showAllLeaders, setShowAllLeaders] = useState(false);
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
       {formOpen && (
         <div 
           style={{

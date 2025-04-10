@@ -8,7 +8,8 @@ I created this software to provide my light show visitors with as much info abou
 
 
 
-[Software Demo Video](https://youtu.be/uovvD8X3i8U)
+[Software Demo Video Version 1](https://youtu.be/uovvD8X3i8U)
+[Software Demo Video Version 2](https://vimeo.com/1074129341/05bb17ed98?share=copy)
 
 
 # Development Environment  
@@ -19,6 +20,7 @@ I created this software to provide my light show visitors with as much info abou
 - **Package Manager:** [npm](https://www.npmjs.com/)
 - **Build Tool:** [Webpack](https://webpack.js.org/) (used internally by React)  
 - **API Testing:** [Postman](https://www.postman.com/)
+- **Firebase Project Dashboard**[Firebase Console](https://console.firebase.google.com/)
 
 ### Programming Language & Libraries  
 - **Programming Language:** JavaScript (ES6+)  
@@ -36,11 +38,10 @@ I created this software to provide my light show visitors with as much info abou
 * [MDN Web Docs](https://developer.mozilla.org/)
 * [Stack Overflow](https://stackoverflow.com/)
 * [GitHub](https://github.com/)
+* [Firebase Docs](https://firebase.google.com/docs/)
 
 
 
 # Future Work
 
-- Add the ability to attach images to pins on the map.  
-- Improve the submission process for adding a light show to the map.  
-- Implement a voting system for the light shows.  
+- Improve the submission process for adding a light show to the map. 
