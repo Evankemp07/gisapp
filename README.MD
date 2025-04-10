@@ -27,7 +27,7 @@ I created this software to provide my light show visitors with as much info abou
 - **Framework:** [React.js](https://react.dev/)
 - **Google Maps API:** [@react-google-maps/api](https://www.npmjs.com/package/@react-google-maps/api)
 - **Markdown Parser:** [marked](https://www.npmjs.com/package/marked)
-- **Google Firebase CL tools** [docs](https://firebase.google.com/docs/cli/)
+- **Firebase CL tools** [docs](https://firebase.google.com/docs/cli/)
 
 
 # Useful Websites
