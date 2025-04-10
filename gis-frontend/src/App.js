@@ -1,7 +1,10 @@
+/* eslint-disable */
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useJsApiLoader } from "@react-google-maps/api";
 import { marked } from "marked";
 import { logEvent } from "firebase/analytics";
+import { getFirestore, doc, updateDoc, increment, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
+
 
 
 
@@ -14,25 +17,81 @@ import { getAnalytics } from "firebase/analytics";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyAJPNpQZ1aXv_s27WVEZATPyJUlTgeYfFU",
-  authDomain: "lightshowlocator.firebaseapp.com",
-  projectId: "lightshowlocator",
-  storageBucket: "lightshowlocator.firebasestorage.app",
-  messagingSenderId: "17368863391",
-  appId: "1:17368863391:web:ec966b591c62007b5448aa",
-  measurementId: "G-QL8NXT3S4Q"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
+
+
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+const db = getFirestore(app);
+const getStoredVote = (id) => localStorage.getItem(`vote-${id}`);
+const setStoredVote = (id, vote) => localStorage.setItem(`vote-${id}`, vote);
+
+
+
 
 
 const API_URL = "https://hideously-pleased-puma.ngrok-free.app/api/locations/";
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 const SVG_ICON_URL =
-  "https://hideously-pleased-puma.ngrok-free.app/lightshow/santahat.svg";
+  "https://hideously-pleased-puma.ngrok-free.app/media/logos/santahat.svg";
 const MEDIA_BASE_URL = "https://hideously-pleased-puma.ngrok-free.app";
+
+
+
+
+export async function recordVote(lightShowId, newVote, previousVote = null) {
+  const voteRef = doc(db, "votes", lightShowId.toString());
+
+  try {
+    const existing = await getDoc(voteRef);
+
+    if (!existing.exists()) {
+      await setDoc(voteRef, { thumbsUp: 0, thumbsDown: 0 });
+    }
+
+    const updateData = {};
+
+    if (newVote === "up") updateData.thumbsUp = increment(1);
+    if (newVote === "down") updateData.thumbsDown = increment(1);
+
+    if (previousVote === "up") updateData.thumbsUp = increment(-1);
+    if (previousVote === "down") updateData.thumbsDown = increment(-1);
+
+    await updateDoc(voteRef, updateData);
+  } catch (error) {
+    console.error("Error recording vote:", error);
+  }
+}
+
+
+
+
+
+export async function fetchVoteCounts(lightShowId) {
+  const voteRef = doc(db, "votes", lightShowId.toString());
+  const snapshot = await getDoc(voteRef);
+
+  if (snapshot.exists()) {
+    const data = snapshot.data();
+    return {
+      thumbsUp: data.thumbsUp || 0,
+      thumbsDown: data.thumbsDown || 0,
+    };
+  } else {
+    return { thumbsUp: 0, thumbsDown: 0 };
+  }
+}
+
+
+
 
 
 const libraries = ["maps", "marker"];
@@ -163,6 +222,53 @@ const buildInfoWindowContent = (location) => {
       </a>
     </div>
   `;
+
+
+  const voteButtons = `
+  <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap;">
+    <button id="thumbs-up-${location.id}" style="
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      padding: 4px 10px;
+      background:  #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: all 0.2s ease;
+      font-weight: 500;
+      font-family: 'FrostyFizz', sans-serif;
+    ">
+      👍 <span id="up-count-${location.id}">0</span>
+    </button>
+
+    <button id="thumbs-down-${location.id}" style="
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      padding: 4px 10px;
+      background:  #e53935;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: all 0.2s ease;
+      font-weight: 500;
+      font-family: 'FrostyFizz', sans-serif;
+    ">
+      👎 <span id="down-count-${location.id}">0</span>
+    </button>
+  </div>
+`;
+
+
+
+
   
   const MUSIC_NOTE_ICON = "https://webstockreview.net/images/clipart-music-muzik-17.png";
 
@@ -188,7 +294,8 @@ const buildInfoWindowContent = (location) => {
       padding-right: 8px;
     ">
       ${cleanedTitle}
-    </div>
+      ${voteButtons}
+      </div>
 
     <div style="
       position: relative;
@@ -292,7 +399,10 @@ const App = () => {
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries: libraries,
   });
+  const [userLocation, setUserLocation] = useState(null);
 
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [topShows, setTopShows] = useState([]);
   const [locations, setLocations] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -306,9 +416,34 @@ const App = () => {
   });
   const [isBannerHidden, setIsBannerHidden] = useState(false);
 
-
   const mapRef = useRef(null);
   const infoWindowRef = useRef(null);
+
+
+  const updateLeaderboard = async () => {
+    const voteSnapshot = await getDocs(collection(db, "votes"));
+    const voteData = {};
+    voteSnapshot.forEach(doc => {
+      const data = doc.data();
+      voteData[doc.id] = data.thumbsUp || 0;
+    });
+  
+    const enriched = locations.map(loc => ({
+      ...loc,
+      thumbsUp: voteData[loc.id?.toString()] || 0
+    }));
+  
+    const sorted = enriched.sort((a, b) => b.thumbsUp - a.thumbsUp).slice(0, 10);
+    setTopShows(sorted);
+  };
+  
+  const focusOnLightShow = (location) => {
+    const map = mapRef.current;
+    if (map) {
+      map.setCenter({ lat: location.latitude, lng: location.longitude });
+      map.setZoom(14);
+    }
+  };
 
   const darkenColor = (color, percent = 20) => {
     const temp = document.createElement("div");
@@ -415,7 +550,7 @@ const App = () => {
     const closestToCenter = getClosestLocationToCenter(locations, centerPoint);
   
     const mapInstance = new Map(document.getElementById("map"), {
-      center: { lat: closestToCenter.latitude, lng: closestToCenter.longitude },
+      center: userLocation || { lat: closestToCenter.latitude, lng: closestToCenter.longitude },
       zoom: 10,
       mapId: "4504f8b37365c3d0",
       colorScheme: ColorScheme.FOLLOW_SYSTEM,
@@ -425,6 +560,35 @@ const App = () => {
     mapRef.current = mapInstance;
     infoWindowRef.current = infoWindowInstance;
 
+    const createUserStarMarker = () => {
+      const star = document.createElement("div");
+      star.style.width = "28px";
+      star.style.height = "28px";
+      star.style.background = "#FFD700"; // gold
+      star.style.clipPath = "polygon(50% 0%, 61% 35%, 98% 35%, \
+        68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)";
+      star.style.boxShadow = "0 0 10px #FFD700";
+      star.style.zIndex = 99999;
+      return star;
+    };
+    
+
+
+    if (userLocation) {
+      const userStar = createUserStarMarker();
+    
+      const userMarker = new window.google.maps.marker.AdvancedMarkerElement({
+        position: userLocation,
+        map: mapInstance,
+        title: "You Are Here",
+        content: userStar,
+        zIndex: 999999, // keeps it on top
+      });
+    }
+    
+    
+    
+
     locations.forEach((location) => {
       const isAnimated = location.is_animated;
       const extractedColor = extractPinColor(location.name);
@@ -433,10 +597,6 @@ const App = () => {
       const borderColor = darkenColor(pinColor, 20);
       const cleanedTitle = cleanTitle(location.name);
 
-      const glyphImg = document.createElement("img");
-      glyphImg.src = SVG_ICON_URL;
-      glyphImg.style.width = "25px";
-      glyphImg.style.height = "25px";
 
       const customMarker = document.createElement("div");
       customMarker.className = "custom-marker";
@@ -478,20 +638,20 @@ const App = () => {
         customMarker.appendChild(halo);
       }
       
-      
-      
-      
-      
-  
+      const iconImg = document.createElement("img");
 
+      if (location.custom_icon) {
+        iconImg.src = `${MEDIA_BASE_URL}${location.custom_icon}`;
+        iconImg.style.width = "25px";
+        iconImg.style.height = "25px";
+      } else {
+        iconImg.src = SVG_ICON_URL;
+        iconImg.style.width = "22px";
+        iconImg.style.height = "28px";
+      }
 
+      customMarker.appendChild(iconImg);
 
-      const hatImg = document.createElement("img");
-      hatImg.src = SVG_ICON_URL;
-      hatImg.style.width = "22px";
-      hatImg.style.height = "28px";
-
-      customMarker.appendChild(hatImg);
 
       const marker = new AdvancedMarkerElement({
         map: mapInstance,
@@ -509,6 +669,14 @@ const App = () => {
         setMenuOpen(m => false)
         const infoContent = buildInfoWindowContent(location);
         infoWindowInstance.setContent(infoContent);
+
+        fetchVoteCounts(location.id).then((voteData) => {
+          const voteElement = document.getElementById(`vote-counts-${location.id}`);
+          if (voteElement) {
+            voteElement.innerHTML = `👍 ${voteData.thumbsUp} | 👎 ${voteData.thumbsDown}`;
+          }
+        });
+        
         infoWindowInstance.open(mapInstance, marker);
 
         logEvent(analytics, "light_show_clicked", {
@@ -519,7 +687,87 @@ const App = () => {
 
       
         window.google.maps.event.addListenerOnce(infoWindowInstance, 'domready', () => {
+          const upVote = document.getElementById(`thumbs-up-${location.id}`);
+          const downVote = document.getElementById(`thumbs-down-${location.id}`);
           const shareButton = document.getElementById('share-light-show');
+          const currentVote = getStoredVote(location.id);
+        
+          const updateVoteDisplay = async () => {
+            const currentVote = getStoredVote(location.id);
+            const voteData = await fetchVoteCounts(location.id);
+          
+            const upCountEl = document.getElementById(`up-count-${location.id}`);
+            const downCountEl = document.getElementById(`down-count-${location.id}`);
+            if (upCountEl) upCountEl.textContent = voteData.thumbsUp;
+            if (downCountEl) downCountEl.textContent = voteData.thumbsDown;
+          
+            const voted = localStorage.getItem(`voted-${location.id}`);
+            if (voted) {
+              if (upVote) upVote.disabled = true;
+              if (downVote) downVote.disabled = true;
+            }
+
+            if (currentVote === "up") {
+              downVote.style.opacity = "0.6";
+              upVote.style.opacity = "1";
+            } else if (currentVote === "down") {
+              upVote.style.opacity = "0.6";
+              downVote.style.opacity = "1";
+            } else {
+              upVote.style.opacity = "1";
+              downVote.style.opacity = "1";
+            }
+
+          };
+          
+          
+        
+          if (upVote && downVote) {
+            upVote.addEventListener("click", async () => {
+              const previousVote = getStoredVote(location.id);
+          
+              if (previousVote === "up") {
+                // Remove the upvote
+                await recordVote(location.id, null, "up");
+                localStorage.removeItem(`vote-${location.id}`);
+              } else {
+                // Cast a new upvote
+                await recordVote(location.id, "up", previousVote);
+                setStoredVote(location.id, "up");
+                logEvent(analytics, "vote_thumbs_up", {
+                  light_show_id: location.id,
+                  title: cleanedTitle,
+                });
+              }
+          
+              await updateVoteDisplay();
+            });
+          
+            downVote.addEventListener("click", async () => {
+              const previousVote = getStoredVote(location.id);
+          
+              if (previousVote === "down") {
+                // Remove the downvote
+                await recordVote(location.id, null, "down");
+                localStorage.removeItem(`vote-${location.id}`);
+              } else {
+                // Cast a new downvote
+                await recordVote(location.id, "down", previousVote);
+                setStoredVote(location.id, "down");
+                logEvent(analytics, "vote_thumbs_down", {
+                  light_show_id: location.id,
+                  title: cleanedTitle,
+                });
+              }
+          
+              await updateVoteDisplay();
+            });
+          
+            updateVoteDisplay();
+          }
+          
+          
+
           if (shareButton) {
             shareButton.addEventListener('click', () => {
               const shareUrl = `${window.location.origin}${window.location.pathname}?locationId=${location.id}`;
@@ -564,6 +812,27 @@ const App = () => {
     
   }, [locations]);
 
+
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Error getting user location:", error);
+        }
+      );
+    } else {
+      console.warn("Geolocation is not supported by this browser.");
+    }
+  }, []);
+  
+
   useEffect(() => {
     if (!isLoaded || locations.length === 0) return;
   
@@ -606,6 +875,8 @@ const App = () => {
       infoWindow.setContent(infoContent);
       infoWindow.open(mapInstance, invisibleMarker);
 
+      
+
 
 
       window.google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
@@ -636,7 +907,8 @@ const App = () => {
   
   
   
-  
+const [showAllLeaders, setShowAllLeaders] = useState(false);
+
 
   return (
     <div style={{ width: "100vw", height: mapHeight, position: "relative" }}>
@@ -713,7 +985,7 @@ const App = () => {
   <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
       <img
-        src="https://hideously-pleased-puma.ngrok-free.app/lightshow/animated.png"
+        src="https://hideously-pleased-puma.ngrok-free.app/media/logos/animated.png"
         alt="Animated"
         style={{ height: "20px" }}
       />
@@ -721,7 +993,7 @@ const App = () => {
     </div>
     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
       <img
-        src="https://hideously-pleased-puma.ngrok-free.app/lightshow/noncontestant.png"
+        src="https://hideously-pleased-puma.ngrok-free.app/media/logos/noncontestant.png"
         alt="Non-Contestant"
         style={{ height: "20px" }}
       />
@@ -729,7 +1001,7 @@ const App = () => {
     </div>
     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
       <img
-        src="https://hideously-pleased-puma.ngrok-free.app/lightshow/contestant.png"
+        src="https://hideously-pleased-puma.ngrok-free.app/media/logos/contestant.png"
         alt="Contestant"
         style={{ height: "20px" }}
       />
@@ -740,7 +1012,7 @@ const App = () => {
   {/* Logo and Copyright */}
   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
     <img
-      src="https://hideously-pleased-puma.ngrok-free.app/lightshow/LMA%20logo%202025.png"
+      src="https://hideously-pleased-puma.ngrok-free.app/media/logos/LMA%20logo%202025.png"
       alt="Lights Music Action Logo"
       style={{ height: "20px", width: "auto", borderRadius: "3px" }}
     />
@@ -817,11 +1089,196 @@ const App = () => {
             >
               ➕ Add Light Show
             </button>
+            <button 
+            onClick={async () => {
+              await updateLeaderboard();
+              setLeaderboardOpen(true);
+            }}
+            style={{
+                display: "block",
+                width: "100%",
+                padding: "10px",
+                textAlign: "left",
+                background: "none",
+                border: "none",
+                color: "#007bff",
+                cursor: "pointer",
+                fontSize: "16px",
+                borderTop: "1px solid #ddd",
+              }}
+              >
+            🏆 View Leaderboard
+          </button>
+
           </div>
         )}
       </div>
 
       <div id="map" style={{ width: "100%", height: "100%" }}></div>
+
+      {leaderboardOpen && (
+  <div
+    style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100dvw",
+      height: "100dvh",
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1000,
+      padding: "env(safe-area-inset)",
+    }}
+    onClick={() => setLeaderboardOpen(false)}
+  >
+    <div
+      style={{
+        backgroundColor: "white",
+        borderRadius: "16px",
+        width: "90dvw",
+        maxWidth: "420px",
+        maxHeight: "85dvh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
+        position: "relative",
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <h2 style={{ textAlign: "center", margin: "16px 0", fontSize: "1.4rem" }}>
+        🏆 Most Popular
+      </h2>
+
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "0 16px 10px 16px",
+        }}
+      >
+        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+          {topShows.map((show, index) => {
+            const isTopThree = index < 3;
+            const backgroundColor = isTopThree
+              ? ["#ffe680", "#d3d3d3", "#dcb189"][index]
+              : "#f7f7f7";
+
+            return (
+              <li
+                key={show.id}
+                style={{
+                  marginBottom: "12px",
+                  background: backgroundColor,
+                  padding: "10px",
+                  borderRadius: "12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
+                  <span style={{ fontWeight: "bold", fontSize: "15px" }}>{index + 1}.</span>
+                  <button
+                    onClick={() => {
+                      focusOnLightShow(show);
+                      setLeaderboardOpen(false);
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#006400",
+                      fontWeight: "bold",
+                      fontSize: "15px",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      padding: 0,
+                      textDecoration: "underline",
+                    }}
+                  >
+                    {cleanTitle(show.name)}
+                  </button>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    alignItems: "flex-end",
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "#4CAF50",
+                      color: "white",
+                      borderRadius: "12px",
+                      padding: "2px 8px",
+                      fontWeight: "bold",
+                      fontSize: "13px",
+                      minWidth: "50px",
+                      textAlign: "center",
+                    }}
+                  >
+                    👍 {show.thumbsUp}
+                  </div>
+                  <div
+                    style={{
+                      background: "#e53935",
+                      color: "white",
+                      borderRadius: "12px",
+                      padding: "2px 8px",
+                      fontWeight: "bold",
+                      fontSize: "13px",
+                      minWidth: "50px",
+                      textAlign: "center",
+                    }}
+                  >
+                    👎 {show.thumbsDown || 0}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <button
+        onClick={() => setLeaderboardOpen(false)}
+        style={{
+          background: "#b30000",
+          color: "white",
+          border: "none",
+          padding: "12px",
+          borderTop: "1px solid #ddd",
+          fontWeight: "bold",
+          fontSize: "16px",
+          cursor: "pointer",
+        }}
+      >
+        Close Leaderboard
+      </button>
+    </div>
+  </div>
+)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
       {formOpen && (
@@ -848,8 +1305,11 @@ const App = () => {
             <button onClick={() => setFormOpen(false)} style={{ background: "#ddd", color: "black", padding: "10px", borderRadius: "5px", cursor: "pointer", marginLeft: "10px" }}>Cancel</button>
           </div>
         </div>
+
+        
       )}
     </div>
+    
   );
 };
 

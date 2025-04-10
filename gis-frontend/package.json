@@ -1,7 +1,6 @@
 {
   "name": "gis-frontend",
   "version": "0.1.0",
-  "homepage": "/lightshow",
   "private": true,
   "dependencies": {
     "@googlemaps/markerclusterer": "^2.5.3",

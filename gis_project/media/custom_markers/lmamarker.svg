@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW 2019 (64-Bit) -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="33.909mm" height="33.909mm" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 33.909 33.909"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil4 {fill:none}
+    .fil2 {fill:#A9ABAE}
+    .fil1 {fill:#606062}
+    .fil0 {fill:#ED3237}
+    .fil3 {fill:#19AB5C}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g id="_3078271424160">
+   <circle class="fil0" cx="16.9545" cy="16.9545" r="13.1742"/>
+   <circle class="fil1" cx="16.9545" cy="16.9545" r="11.6561"/>
+  </g>
+  <path class="fil2" d="M20.7543 22.7927l0 2.7618c0,1.6825 -1.4217,2.9635 -3.0742,2.9635l-1.4513 0c-1.6524,0 -3.0743,-1.281 -3.0743,-2.9635l0 -2.7618 -1.6865 0c-0.9416,0 -1.8302,-0.4042 -2.424,-1.1378 -0.709,-0.8758 -0.8539,-2.0523 -0.3673,-3.0699l5.4864 -11.4749c0.5136,-1.0743 1.6085,-1.7191 2.7913,-1.7191 1.1828,0 2.2778,0.6448 2.7914,1.7191l5.4865 11.4749c0.4866,1.0178 0.3416,2.1943 -0.3677,3.0702 -0.5938,0.7334 -1.4822,1.1375 -2.4237,1.1375l-1.6866 0z"/>
+  <path class="fil3" d="M11.468 20.3967l3.4043 0c0.3735,0 0.6782,0.2549 0.6782,0.5674l0 4.5905c0,0.3125 0.3048,0.5674 0.6783,0.5674l1.4513 0c0.3735,0 0.6783,-0.2549 0.6783,-0.5674l0 -4.5905c0,-0.3125 0.3047,-0.5674 0.6782,-0.5674l3.4043 0c0.232,0 0.4315,-0.0886 0.5617,-0.2493 0.1301,-0.1607 0.1542,-0.3486 0.0681,-0.5289l-5.4865 -11.4749c-0.1051,-0.2198 -0.3467,-0.3566 -0.6298,-0.3566 -0.283,0 -0.5246,0.1368 -0.6297,0.3566l-5.4864 11.4749c-0.0862,0.1803 -0.062,0.3682 0.068,0.5289 0.1301,0.1607 0.3297,0.2493 0.5617,0.2493z"/>
+  <circle class="fil4" cx="16.9544" cy="16.9545" r="16.9546"/>
+ </g>
+</svg>

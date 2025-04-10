@@ -82,6 +82,15 @@ class LocationAdminForm(forms.ModelForm):
     class Meta:
         model = Location
         fields = "__all__"
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.custom_icon:
+            self.fields['custom_icon'].help_text = mark_safe(
+                f'<div style="margin-top: 10px;">Current Icon:<br>'
+                f'<img src="{self.instance.custom_icon.url}" height="50" alt="Current SVG Icon"/></div>'
+            )
 
     class Media:
         js = (
